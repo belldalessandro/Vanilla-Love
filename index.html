@@ -83,6 +83,10 @@ input[type=text]:focus,button:focus-visible{outline:3px solid var(--pink);outlin
 .ci .step small{color:var(--muted);margin-right:4px}
 .need{columns:2 220px;list-style:none;margin:0 0 6px;padding:0}
 .need li{break-inside:avoid;padding:2px 0}
+#catalog.m .cat:not(.mt){display:none}
+#catalog:not(.m) .cat.mt{display:none}
+.cat.mt h3{display:none}
+.cat.mt{margin-top:-6px}
 .ov{position:fixed;inset:0;z-index:50;background:rgba(20,8,14,.72);overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:max(16px,env(safe-area-inset-top,0px)) 16px max(16px,env(safe-area-inset-bottom,0px))}
 .box{background:var(--surface);border-radius:18px;padding:16px;width:100%;max-width:520px}
 .box canvas{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
@@ -99,6 +103,7 @@ input[type=text]:focus,button:focus-visible{outline:3px solid var(--pink);outlin
 
 <nav class="tabs" role="tablist" aria-label="Seções">
   <button class="tab" role="tab" id="tabv" aria-selected="true" type="button">Vendas</button>
+  <button class="tab" role="tab" id="tabm" aria-selected="false" type="button">Manutenção</button>
   <button class="tab" role="tab" id="tabc" aria-selected="false" type="button">Craft</button>
 </nav>
 
@@ -114,12 +119,12 @@ input[type=text]:focus,button:focus-visible{outline:3px solid var(--pink);outlin
     </section>
 
     <button class="partner" id="partner" type="button" aria-pressed="false" style="margin-top:20px">
-      <span>Parceria<small id="pdesc">Ative se o cliente for parceiro e aplique 20% de desconto</small></span>
+      <span>Parceria<small id="pdesc">Ative se o cliente for parceiro: 20% de desconto, exceto nas bebidas</small></span>
       <span class="sw" aria-hidden="true"></span>
     </button>
 
     <section class="card" style="margin-top:20px">
-      <h2>O que o cliente comprou</h2>
+      <h2 id="ctitle">O que o cliente comprou</h2>
       <div id="catalog"></div>
     </section>
   </div>
@@ -129,7 +134,7 @@ input[type=text]:focus,button:focus-visible{outline:3px solid var(--pink);outlin
     <ul class="list" id="rlist"></ul>
     <div class="sum">
       <div><span>Subtotal</span><span id="sub">R$ 0</span></div>
-      <div id="drow" hidden><span>Desconto de parceria (20%)</span><span id="disc">R$ 0</span></div>
+      <div id="drow" hidden><span>Desconto de parceria (exceto bebidas)</span><span id="disc">R$ 0</span></div>
       <div class="tot"><span>Total a cobrar</span><span id="tot">R$ 0</span></div>
     </div>
     <div class="split">
@@ -188,22 +193,25 @@ var WEBHOOK_URL="https://discord.com/api/webhooks/1572099501555056790/WTCoNYDfyo
 var CAT=[
 ["Joias",[["Aliança de casamento",30000],["Anel de compromisso",20000],["Colar de pérolas",8000],["Colar para casais",10000]]],
 ["Íntimo",[["Vibrador rosa",15000],["Vibrador azul",12000],["Vibrador preto",10000],["Cinto erótico",12000],["Chicote erótico",12000],["Dado erótico",10000],["Corda erótica",6000],["Algema erótica",12000],["Revista pornô",12000]]],
-["Presentes",[["Presente amarelo",5000],["Presente rosa",5000],["Urso de pelúcia",5000],["Rosa",3000],["Buquê de flores",12000],["Balões",12000],["Balão menino",12000],["Balão menina",15000]]],
+["Presentes",[["Presente amarelo",5000],["Presente rosa",5000],["Urso de pelúcia",5000],["Rosa",3000],["Buquê de flores",12000]]],
+["Festa",[["Balões",12000],["Balão menino",12000],["Balão menina",12000]]],
 ["Aniversário",[["Caixa de chocolates",8000],["Bolo Pride",5000],["Bolo Revelação",5000],["Bolo Romântico",5000],["Bolo de Chocolate",5000]]],
+["Manutenção",[["Manutenção: Aliança de casamento",15000],["Manutenção: Anel de compromisso",10000],["Manutenção: Colar de pérolas",4000],["Manutenção: Colar para casais",5000]]],
 ["Bebidas",[["Vanilla Blackout",4000],["Vanilla Dizzy",3000],["Vanilla Hypnotic",3000],["Vanilla Illusion",3000],["Vanilla Love Potion",3000],["Vanilla Rainbow",3000]]]
 ];
 var $=function(i){return document.getElementById(i)};
 var brl=function(n){return "R$ "+n.toLocaleString("pt-BR")};
 var qty=[],partner=false,flat=[],rows=[];
+function unit(f){return partner&&!f.nd?Math.round(f.p*0.8):f.p}
 
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 
 (function build(){
   var h="",k=0;
   CAT.forEach(function(c){
-    h+='<div class="cat"><h3>'+c[0]+'</h3>';
+    h+='<div class="cat'+(c[0]==="Manutenção"?' mt':'')+'"><h3>'+c[0]+'</h3>';
     c[1].forEach(function(it){
-      flat.push({n:it[0],p:it[1]});qty.push(0);
+      flat.push({n:it[0],p:it[1],nd:c[0]==="Bebidas"});qty.push(0);
       h+='<div class="row" data-i="'+k+'"><div class="n">'+esc(it[0])+'<div class="p"></div></div><div class="step"><button type="button" data-d="-1" aria-label="Tirar '+esc(it[0])+'">−</button><span>0</span><button type="button" data-d="1" aria-label="Adicionar '+esc(it[0])+'">+</button></div></div>';
       k++;
     });
@@ -214,8 +222,7 @@ function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp
 })();
 
 function calc(){
-  var sub=0;flat.forEach(function(f,i){sub+=f.p*qty[i]});
-  var total=partner?Math.round(sub*0.8):sub;
+  var sub=0,total=0;flat.forEach(function(f,i){sub+=f.p*qty[i];total+=unit(f)*qty[i]});
   var mine=Math.round(total*0.8);
   return {sub:sub,disc:sub-total,total:total,mine:mine,bank:total-mine};
 }
@@ -223,12 +230,12 @@ function calc(){
 function update(){
   rows.forEach(function(r,i){
     var f=flat[i],pr=r.querySelector(".p");
-    pr.innerHTML=partner?'<s>'+brl(f.p)+'</s><em>'+brl(Math.round(f.p*0.8))+'</em>':brl(f.p);
+    pr.innerHTML=(partner&&!f.nd)?'<s>'+brl(f.p)+'</s><em>'+brl(unit(f))+'</em>':brl(f.p)+(partner&&f.nd?' \u00b7 sem desconto':'');
     r.querySelector(".step span").textContent=qty[i];
     r.classList.toggle("on",qty[i]>0);
   });
   var c=calc(),li="";
-  flat.forEach(function(f,i){if(qty[i]>0){var u=partner?Math.round(f.p*0.8):f.p;li+='<li><span>'+qty[i]+'× '+esc(f.n)+'</span><span>'+brl(u*qty[i])+'</span></li>'}});
+  flat.forEach(function(f,i){if(qty[i]>0){var u=unit(f);li+='<li><span>'+qty[i]+'× '+esc(f.n)+'</span><span>'+brl(u*qty[i])+'</span></li>'}});
   $("rlist").innerHTML=li||'<li class="empty">Escolha os itens da venda ao lado.</li>';
   $("sub").textContent=brl(c.sub);
   $("drow").hidden=!partner;
@@ -249,14 +256,14 @@ $("catalog").addEventListener("click",function(e){
 $("partner").addEventListener("click",function(){
   partner=!partner;
   this.setAttribute("aria-pressed",partner);
-  $("pdesc").textContent=partner?"Parceria ativa: 20% de desconto aplicado em todos os itens":"Ative se o cliente for parceiro e aplique 20% de desconto";
+  $("pdesc").textContent=partner?"Parceria ativa: 20% de desconto em todos os itens, exceto bebidas":"Ative se o cliente for parceiro: 20% de desconto, exceto nas bebidas";
   update();
 });
 $("clr").addEventListener("click",function(){qty=qty.map(function(){return 0});say("");update()});
 
 function sale(){
   var c=calc(),its=[];
-  var d=[];flat.forEach(function(f,i){if(qty[i]>0){its.push(qty[i]+"× "+f.n);d.push({q:qty[i],n:f.n,u:partner?Math.round(f.p*0.8):f.p})}});
+  var d=[];flat.forEach(function(f,i){if(qty[i]>0){its.push(qty[i]+"× "+f.n);d.push({q:qty[i],n:f.n,u:unit(f)})}});
   return {t:Date.now(),emp:$("emp").value.trim(),pass:$("pass").value.trim(),cli:$("cli").value.trim(),its:its,d:d,partner:partner,sub:c.sub,disc:c.disc,total:c.total,mine:c.mine,bank:c.bank};
 }
 function check(){
@@ -333,10 +340,11 @@ var CR=[
 ["Vanilla Love Potion",B([["Alumínio",1],["Flor do campo",1],["Vidro",1]])],
 ["Vanilla Rainbow",B([["Alumínio",1],["Flor do campo",1],["Vidro",1]])],
 ["Vanilla Good Night",B([["Flor do campo",1]])]]],
-["Festa e presentes",[
+["Festa",[
 ["Balão menino",[["Plástico",1],["Fita de cetim",1],["Borracha",3]]],
 ["Balão menina",[["Plástico",2],["Fita de cetim",1],["Borracha",3]]],
-["Balões",[["Plástico",2],["Fita de cetim",1],["Borracha",3]]],
+["Balões",[["Plástico",2],["Fita de cetim",1],["Borracha",3]]]]],
+["Presentes",[
 ["Buquê de flores",[["Flor do campo",2],["Fita de cetim",2],["Papel",4],["Saquinho de presente",2]]],
 ["Rosa",[["Flor do campo",1],["Fita de cetim",1],["Papel",2],["Saquinho de presente",1]]],
 ["Presente amarelo / rosa",[["Caixa de presente",1],["Fita de cetim",1],["Papel",1]]],
@@ -372,11 +380,16 @@ $("clist").addEventListener("click",function(e){
 });
 $("cclr").addEventListener("click",function(){crq=crq.map(function(){return 0});cupdate()});
 function tab(n){
-  var v=n==="vendas";
+  var v=n!=="craft";
   $("p-vendas").hidden=!v;$("p-hist").hidden=!v;$("p-craft").hidden=v;
-  $("tabv").setAttribute("aria-selected",v);$("tabc").setAttribute("aria-selected",!v);
+  $("catalog").classList.toggle("m",n==="manut");
+  $("ctitle").textContent=n==="manut"?"Manutenção de joias (50% do valor da joia)":"O que o cliente comprou";
+  $("tabv").setAttribute("aria-selected",n==="vendas");
+  $("tabm").setAttribute("aria-selected",n==="manut");
+  $("tabc").setAttribute("aria-selected",n==="craft");
 }
 $("tabv").addEventListener("click",function(){tab("vendas")});
+$("tabm").addEventListener("click",function(){tab("manut")});
 $("tabc").addEventListener("click",function(){tab("craft")});
 cupdate();
 
@@ -411,7 +424,7 @@ function paint(s){
     if(it.u!=null){c.textAlign="right";c.font="800 22px "+SN;c.fillText(brl(it.u*it.q),W-P,y)}
   });
   y+=22;hr();
-  if(s.partner&&typeof s.sub==="number"){y+=36;row("Subtotal",brl(s.sub));y+=38;row("Desconto de parceria (20%)","− "+brl(s.disc))}
+  if(s.partner&&typeof s.sub==="number"){y+=36;row("Subtotal",brl(s.sub));y+=38;row("Desconto de parceria (exceto bebidas)","− "+brl(s.disc))}
   y+=60;c.textAlign="left";c.fillStyle="#3a1f2b";c.font="800 30px "+SN;c.fillText("Total",P,y);
   c.textAlign="right";c.fillStyle="#c2335f";c.font="800 36px "+SN;c.fillText(brl(s.total),W-P,y);y+=30;
   function box(l,v,fill,dash){rr(c,P,y,W-2*P,104,16);c.fillStyle=fill;c.fill();c.strokeStyle="#f7608a";c.lineWidth=3;c.setLineDash(dash);c.stroke();c.setLineDash([]);c.textAlign="left";c.fillStyle="#7d5d6a";c.font="400 20px "+SN;c.fillText(l,P+24,y+38);c.fillStyle="#3a1f2b";c.font="800 38px "+SN;c.fillText(v,P+24,y+84);y+=120}
